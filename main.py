@@ -1,6 +1,7 @@
 import torch
 import psycopg2
 from transformers import pipeline, logging
+import json
 
 # --- Config ---
 DB_CONFIG = {
@@ -61,7 +62,14 @@ def fetch_questions(limit=100):
     return [{"category": r[0], "prompt": r[1], "answer": r[2]} for r in rows]
 
 
+def save_questions_to_json(questions, file_path="questions.json"):
+    """Save a list of question dicts to a JSON file."""
+    with open(file_path, "w", encoding="utf-8") as f:
+        json.dump(questions, f, ensure_ascii=False, indent=2)
+
+
 # --- Main Execution ---
+
 questions = fetch_questions(limit=10)
 
 for q in questions:
@@ -69,9 +77,13 @@ for q in questions:
     result = classifier(q["prompt"], candidate_labels=categories)
     predicted_category = result["labels"][0]
     confidence = result["scores"][0]
+    q["predicted_category"] = predicted_category
+    q["confidence"] = confidence
 
     print("—" * 60)
     print(f"Prompt   : {q['prompt']}")
     print(f"Answer   : {q['answer']}")
     print(f"Actual   : {q['category']}")
     print(f"Predicted: {predicted_category} (Confidence: {confidence:.4f})")
+
+save_questions_to_json(questions)
